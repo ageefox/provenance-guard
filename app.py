@@ -4,6 +4,7 @@ import uuid
 import math
 import string
 import re
+import secrets
 from datetime import datetime, timezone
 from collections import Counter
 
@@ -491,6 +492,14 @@ def verify():
 @app.route("/admin/approve_certificate", methods=["POST"])
 def approve_certificate():
     """Admin endpoint to approve a pending verification request."""
+    admin_key = os.environ.get("ADMIN_API_KEY")
+    if not admin_key:
+        return jsonify({"error": "Certificate approval is not configured"}), 503
+
+    supplied_key = request.headers.get("X-Admin-Key", "")
+    if not secrets.compare_digest(supplied_key, admin_key):
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
