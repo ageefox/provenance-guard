@@ -332,6 +332,11 @@ def generate_label(confidence: float, certificate: bool = False) -> str:
 # Routes
 # ---------------------------------------------------------------------------
 
+def _string_field(data: dict, name: str) -> str:
+    value = data.get(name)
+    return value.strip() if isinstance(value, str) else ""
+
+
 @app.route("/submit", methods=["POST"])
 @limiter.limit("10 per minute;100 per day")
 def submit():
@@ -339,8 +344,8 @@ def submit():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    text = data.get("text", "").strip()
-    creator_id = data.get("creator_id", "").strip()
+    text = _string_field(data, "text")
+    creator_id = _string_field(data, "creator_id")
 
     if not text:
         return jsonify({"error": "Missing required field: text"}), 400
@@ -419,8 +424,8 @@ def appeal():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    content_id = data.get("content_id", "").strip()
-    creator_reasoning = data.get("creator_reasoning", "").strip()
+    content_id = _string_field(data, "content_id")
+    creator_reasoning = _string_field(data, "creator_reasoning")
 
     if not content_id:
         return jsonify({"error": "Missing required field: content_id"}), 400
@@ -458,8 +463,8 @@ def verify():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    creator_id = data.get("creator_id", "").strip()
-    statement = data.get("statement", "").strip()
+    creator_id = _string_field(data, "creator_id")
+    statement = _string_field(data, "statement")
 
     if not creator_id:
         return jsonify({"error": "Missing required field: creator_id"}), 400
@@ -504,7 +509,7 @@ def approve_certificate():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    creator_id = data.get("creator_id", "").strip()
+    creator_id = _string_field(data, "creator_id")
     if not creator_id:
         return jsonify({"error": "Missing required field: creator_id"}), 400
 
