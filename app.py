@@ -8,6 +8,7 @@ import secrets
 from functools import wraps
 from datetime import datetime, timezone
 from collections import Counter
+from pathlib import Path
 
 from flask import Flask, request, jsonify
 from flask_limiter import Limiter
@@ -35,24 +36,36 @@ limiter = Limiter(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # ---------------------------------------------------------------------------
-# Audit log
+# Local storage
 # ---------------------------------------------------------------------------
-LOG_FILE = "audit_log.json"
+DATA_DIR = Path(os.environ.get("PROVENANCE_DATA_DIR", ".data"))
+LOG_FILE = DATA_DIR / "audit_log.json"
+CONTENT_FILE = DATA_DIR / "content_store.json"
+CERT_FILE = DATA_DIR / "certificate_store.json"
+
+
+def _read_json(path, default):
+    path = Path(path)
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return default
+
+
+def _write_json(path, value):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2) + "\n")
 
 
 def read_log():
-    if not os.path.exists(LOG_FILE):
-        return []
-    with open(LOG_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+    return _read_json(LOG_FILE, [])
 
 
 def write_log(entries):
-    with open(LOG_FILE, "w") as f:
-        json.dump(entries, f, indent=2)
+    _write_json(LOG_FILE, entries)
 
 
 def append_log(entry):
@@ -61,25 +74,12 @@ def append_log(entry):
     write_log(entries)
 
 
-# ---------------------------------------------------------------------------
-# Content store
-# ---------------------------------------------------------------------------
-CONTENT_FILE = "content_store.json"
-
-
 def read_store():
-    if not os.path.exists(CONTENT_FILE):
-        return {}
-    with open(CONTENT_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+    return _read_json(CONTENT_FILE, {})
 
 
 def write_store(store):
-    with open(CONTENT_FILE, "w") as f:
-        json.dump(store, f, indent=2)
+    _write_json(CONTENT_FILE, store)
 
 
 def store_content(content_id, data):
@@ -101,25 +101,12 @@ def update_content_status(content_id, status):
     return False
 
 
-# ---------------------------------------------------------------------------
-# Certificate store
-# ---------------------------------------------------------------------------
-CERT_FILE = "certificate_store.json"
-
-
 def read_certs():
-    if not os.path.exists(CERT_FILE):
-        return {}
-    with open(CERT_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+    return _read_json(CERT_FILE, {})
 
 
 def write_certs(certs):
-    with open(CERT_FILE, "w") as f:
-        json.dump(certs, f, indent=2)
+    _write_json(CERT_FILE, certs)
 
 
 def is_verified(creator_id: str) -> bool:
