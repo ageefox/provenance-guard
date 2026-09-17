@@ -4,6 +4,10 @@ Provenance Guard is a course prototype for exploring transparent authorship labe
 
 The project demonstrates API design, ensemble scoring, audit logging, rate limiting, and a small certificate workflow. It is not a validated AI-text detector and should not be used to make academic, employment, moderation, or disciplinary decisions.
 
+## Course context
+
+This repository contains my completed project and later revisions for [CodePath AI201 Project 4: Provenance Guard](https://github.com/codepath/ai201-project4-provenance-guard-starter-v2026). The course starter does not include a software license, so this repository does not add a separate license.
+
 ## How it works
 
 `POST /submit` evaluates text using three signals:
