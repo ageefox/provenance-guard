@@ -5,6 +5,7 @@ import math
 import string
 import re
 import secrets
+from functools import wraps
 from datetime import datetime, timezone
 from collections import Counter
 
@@ -337,6 +338,21 @@ def _string_field(data: dict, name: str) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
+def _admin_required(view):
+    @wraps(view)
+    def protected(*args, **kwargs):
+        admin_key = os.environ.get("ADMIN_API_KEY")
+        if not admin_key:
+            return jsonify({"error": "Admin access is not configured"}), 503
+
+        supplied_key = request.headers.get("X-Admin-Key", "")
+        if not secrets.compare_digest(supplied_key, admin_key):
+            return jsonify({"error": "Unauthorized"}), 401
+        return view(*args, **kwargs)
+
+    return protected
+
+
 @app.route("/submit", methods=["POST"])
 @limiter.limit("10 per minute;100 per day")
 def submit():
@@ -495,16 +511,9 @@ def verify():
 
 
 @app.route("/admin/approve_certificate", methods=["POST"])
+@_admin_required
 def approve_certificate():
     """Admin endpoint to approve a pending verification request."""
-    admin_key = os.environ.get("ADMIN_API_KEY")
-    if not admin_key:
-        return jsonify({"error": "Certificate approval is not configured"}), 503
-
-    supplied_key = request.headers.get("X-Admin-Key", "")
-    if not secrets.compare_digest(supplied_key, admin_key):
-        return jsonify({"error": "Unauthorized"}), 401
-
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
@@ -536,12 +545,14 @@ def approve_certificate():
 
 
 @app.route("/log", methods=["GET"])
+@_admin_required
 def get_log():
     entries = read_log()
     return jsonify({"entries": entries[-50:], "total": len(entries)}), 200
 
 
 @app.route("/dashboard", methods=["GET"])
+@_admin_required
 def dashboard():
     entries = read_log()
     submissions = [e for e in entries if e.get("entry_type") == "submission"]
@@ -587,4 +598,4 @@ def health():
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(port=5001)
