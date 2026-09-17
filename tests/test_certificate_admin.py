@@ -23,7 +23,7 @@ def test_approval_is_disabled_without_an_admin_key(client):
     response = client.post("/admin/approve_certificate", json={"creator_id": "writer-1"})
 
     assert response.status_code == 503
-    assert response.get_json() == {"error": "Certificate approval is not configured"}
+    assert response.get_json() == {"error": "Admin access is not configured"}
 
 
 def test_approval_rejects_an_invalid_admin_key(client, monkeypatch):
@@ -74,3 +74,30 @@ def test_authorized_admin_cannot_approve_an_unknown_creator(client, monkeypatch)
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize("endpoint", ["/log", "/dashboard"])
+def test_operational_endpoints_are_disabled_without_an_admin_key(client, endpoint):
+    response = client.get(endpoint)
+
+    assert response.status_code == 503
+    assert response.get_json() == {"error": "Admin access is not configured"}
+
+
+@pytest.mark.parametrize("endpoint", ["/log", "/dashboard"])
+def test_operational_endpoints_reject_an_invalid_admin_key(client, monkeypatch, endpoint):
+    monkeypatch.setenv("ADMIN_API_KEY", "correct-key")
+
+    response = client.get(endpoint, headers={"X-Admin-Key": "wrong-key"})
+
+    assert response.status_code == 401
+    assert response.get_json() == {"error": "Unauthorized"}
+
+
+@pytest.mark.parametrize("endpoint", ["/log", "/dashboard"])
+def test_authorized_admin_can_read_operational_endpoints(client, monkeypatch, endpoint):
+    monkeypatch.setenv("ADMIN_API_KEY", "correct-key")
+
+    response = client.get(endpoint, headers={"X-Admin-Key": "correct-key"})
+
+    assert response.status_code == 200
