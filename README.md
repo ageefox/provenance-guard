@@ -39,17 +39,19 @@ The service runs at `http://localhost:5001`. Check it with:
 curl http://localhost:5001/health
 ```
 
+Runtime records are written under `.data/`, which is ignored by Git. Set `PROVENANCE_DATA_DIR` to use another local directory.
+
 ## API
 
 - `POST /submit` — analyze text and return the component scores
 - `POST /appeal` — mark a stored classification for human review
 - `POST /verify` — request a creator certificate
 - `POST /admin/approve_certificate` — approve a request using the `X-Admin-Key` header
-- `GET /log` — return the 50 most recent audit entries
-- `GET /dashboard` — summarize submissions and appeals
+- `GET /log` — return the 50 most recent audit entries to an administrator
+- `GET /dashboard` — return aggregate submission and appeal statistics to an administrator
 - `GET /health` — report service health
 
-The request and response details, score weights, and design decisions are documented in [`planning.md`](planning.md).
+Certificate approval, the audit log, and dashboard require the `X-Admin-Key` header. The scoring flow and storage design are documented in [`docs/architecture.md`](docs/architecture.md).
 
 ## Tests
 
@@ -69,4 +71,4 @@ The tests use temporary JSON stores and do not call the Groq API.
 - The certificate process records manual approval. It does not cryptographically establish a person's identity or how a document was created.
 - A shared admin key is suitable only for this prototype. A deployed service would need user authentication, authorization, secret management, and key rotation.
 - JSON files are used for local persistence and do not support concurrent production workloads.
-- The dashboard and audit-log endpoints do not include access control.
+- Appeals use possession of a content ID and do not authenticate the original creator.
